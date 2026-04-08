@@ -4,17 +4,28 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
+import { useAuth } from '@/context/AuthContext'
 
 export default function LoginPage() {
   const router = useRouter()
+  const { signIn } = useAuth()
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
   const [form, setForm] = useState({ email: '', password: '' })
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
-    await new Promise(r => setTimeout(r, 1000))
-    router.push('/')
+    setError('')
+
+    const { error: err } = await signIn(form.email, form.password)
+    
+    if (err) {
+      setError(err.message)
+      setLoading(false)
+    } else {
+      router.push('/')
+    }
   }
 
   return (
@@ -23,6 +34,12 @@ export default function LoginPage() {
         <div className="bg-snap-card rounded-2xl border border-snap-border p-8">
           <h1 className="font-display text-3xl font-bold text-snap-text text-center mb-2">Welcome Back</h1>
           <p className="text-snap-muted text-center text-sm mb-8">Sign in to your account</p>
+
+          {error && (
+            <div className="bg-red-400/10 border border-red-400/20 rounded-lg px-4 py-3 mb-6 text-red-400 text-sm">
+              {error}
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>

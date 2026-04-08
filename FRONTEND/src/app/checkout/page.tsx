@@ -2,13 +2,16 @@
 
 import { useState } from 'react'
 import { useCart } from '@/context/CartContext'
+import { useAuth } from '@/context/AuthContext'
 import Link from 'next/link'
 import { Loader2, CheckCircle } from 'lucide-react'
 
 export default function CheckoutPage() {
   const { state, total, dispatch } = useCart()
+  const { user } = useAuth()
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [error, setError] = useState('')
   const [form, setForm] = useState({
     firstName: '',
     lastName: '',
@@ -47,10 +50,57 @@ export default function CheckoutPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
-    await new Promise(r => setTimeout(r, 1500))
-    dispatch({ type: 'CLEAR' })
-    setSuccess(true)
-    setLoading(false)
+    setError('')
+
+    try {
+      const shippingAddress = {
+        firstName: form.firstName,
+        lastName: form.lastName,
+        email: form.email,
+        phone: form.phone,
+        address: form.address,
+        city: form.city,
+        country: form.country,
+      }
+
+      const items = state.items.map(item => ({
+        id: item.product.id,
+        productId: item.product.id,
+        title: item.product.title,
+        price: item.product.price,
+        quantity: item.quantity,
+        image: item.product.image,
+      }))
+
+      const res = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user?.id,
+          items,
+          subtotal: total,
+          shippingCost: 4.99,
+          total: total + 4.99,
+          paymentMethod: form.paymentMethod,
+          shippingAddress,
+        }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok || data.error) {
+        setError(data.error || 'Failed to create order')
+        setLoading(false)
+        return
+      }
+
+      dispatch({ type: 'CLEAR' })
+      setSuccess(true)
+    } catch (err) {
+      setError('Something went wrong. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -60,6 +110,12 @@ export default function CheckoutPage() {
 
         <form onSubmit={handleSubmit} className="grid lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
+            {error && (
+              <div className="bg-red-400/10 border border-red-400/20 rounded-lg px-4 py-3 text-red-400 text-sm">
+                {error}
+              </div>
+            )}
+
             <div className="bg-snap-card rounded-2xl border border-snap-border p-6">
               <h2 className="font-display text-lg font-bold text-snap-text mb-4">Contact Info</h2>
               <div className="grid sm:grid-cols-2 gap-4">
@@ -159,7 +215,7 @@ export default function CheckoutPage() {
               </div>
               <div className="border-t border-snap-border pt-3 flex justify-between font-bold mb-6">
                 <span className="text-snap-text">Total</span>
-                <span className="text-snap-accent text-xl">${total.toFixed(2)}</span>
+                <span className="text-snap-accent text-xl">${(total + 4.99).toFixed(2)}</span>
               </div>
               <button
                 type="submit"

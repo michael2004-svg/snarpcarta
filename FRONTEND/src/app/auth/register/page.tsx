@@ -4,17 +4,46 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
+import { useAuth } from '@/context/AuthContext'
 
 export default function RegisterPage() {
   const router = useRouter()
+  const { signUp } = useAuth()
   const [loading, setLoading] = useState(false)
-  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', password: '', phone: '' })
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState(false)
+  const [form, setForm] = useState({ email: '', password: '' })
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
-    await new Promise(r => setTimeout(r, 1000))
-    router.push('/')
+    setError('')
+
+    const { error: err } = await signUp(form.email, form.password)
+    
+    if (err) {
+      setError(err.message)
+      setLoading(false)
+    } else {
+      setSuccess(true)
+    }
+  }
+
+  if (success) {
+    return (
+      <main className="pt-20 min-h-screen flex items-center justify-center px-4">
+        <div className="w-full max-w-md text-center">
+          <div className="bg-snap-card rounded-2xl border border-snap-border p-8">
+            <h1 className="font-display text-3xl font-bold text-snap-text mb-4">Check Your Email</h1>
+            <p className="text-snap-muted mb-6">
+              We've sent you a confirmation link to <strong className="text-snap-text">{form.email}</strong>.
+              Click the link to activate your account.
+            </p>
+            <Link href="/auth/login" className="btn-ghost">Back to Login</Link>
+          </div>
+        </div>
+      </main>
+    )
   }
 
   return (
@@ -24,29 +53,13 @@ export default function RegisterPage() {
           <h1 className="font-display text-3xl font-bold text-snap-text text-center mb-2">Create Account</h1>
           <p className="text-snap-muted text-center text-sm mb-8">Join Snapcarta today</p>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-snap-muted text-xs mb-1 block">First Name</label>
-                <input
-                  required
-                  placeholder="John"
-                  className="w-full bg-snap-surface border border-snap-border rounded-lg px-4 py-3 text-snap-text focus:outline-none focus:border-snap-accent"
-                  value={form.firstName}
-                  onChange={e => setForm({ ...form, firstName: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className="text-snap-muted text-xs mb-1 block">Last Name</label>
-                <input
-                  required
-                  placeholder="Doe"
-                  className="w-full bg-snap-surface border border-snap-border rounded-lg px-4 py-3 text-snap-text focus:outline-none focus:border-snap-accent"
-                  value={form.lastName}
-                  onChange={e => setForm({ ...form, lastName: e.target.value })}
-                />
-              </div>
+          {error && (
+            <div className="bg-red-400/10 border border-red-400/20 rounded-lg px-4 py-3 mb-6 text-red-400 text-sm">
+              {error}
             </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="text-snap-muted text-xs mb-1 block">Email</label>
               <input
@@ -59,21 +72,11 @@ export default function RegisterPage() {
               />
             </div>
             <div>
-              <label className="text-snap-muted text-xs mb-1 block">Phone</label>
-              <input
-                type="tel"
-                required
-                placeholder="+254712345678"
-                className="w-full bg-snap-surface border border-snap-border rounded-lg px-4 py-3 text-snap-text focus:outline-none focus:border-snap-accent"
-                value={form.phone}
-                onChange={e => setForm({ ...form, phone: e.target.value })}
-              />
-            </div>
-            <div>
               <label className="text-snap-muted text-xs mb-1 block">Password</label>
               <input
                 type="password"
                 required
+                minLength={6}
                 placeholder="••••••••"
                 className="w-full bg-snap-surface border border-snap-border rounded-lg px-4 py-3 text-snap-text focus:outline-none focus:border-snap-accent"
                 value={form.password}

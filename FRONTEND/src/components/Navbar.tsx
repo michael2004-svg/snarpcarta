@@ -1,12 +1,14 @@
 'use client'
 
 import Link from 'next/link'
-import { ShoppingCart, Menu, X, Zap } from 'lucide-react'
+import { ShoppingCart, Menu, X, Zap, LogOut } from 'lucide-react'
 import { useState } from 'react'
 import { useCart } from '@/context/CartContext'
+import { useAuth } from '@/context/AuthContext'
 
 export default function Navbar() {
   const { itemCount, dispatch } = useCart()
+  const { user, signOut } = useAuth()
   const [menuOpen, setMenuOpen] = useState(false)
 
   return (
@@ -19,7 +21,7 @@ export default function Navbar() {
 
         <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
           <Link href="/" className="text-snap-muted hover:text-snap-text transition-colors">Home</Link>
-          <Link href="/orders" className="text-snap-muted hover:text-snap-text transition-colors">Orders</Link>
+          {user && <Link href="/orders" className="text-snap-muted hover:text-snap-text transition-colors">Orders</Link>}
           <Link href="/admin" className="text-snap-muted hover:text-snap-text transition-colors">Admin</Link>
         </nav>
 
@@ -35,7 +37,17 @@ export default function Navbar() {
               </span>
             )}
           </button>
-          <Link href="/auth/login" className="hidden md:block btn-ghost text-sm">Login</Link>
+          {user ? (
+            <button
+              onClick={() => signOut()}
+              className="hidden md:flex items-center gap-2 text-sm text-snap-muted hover:text-snap-text transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+              Sign Out
+            </button>
+          ) : (
+            <Link href="/auth/login" className="hidden md:block btn-ghost text-sm">Login</Link>
+          )}
           <button
             className="md:hidden p-2 text-snap-muted hover:text-snap-text"
             onClick={() => setMenuOpen(v => !v)}
@@ -48,9 +60,13 @@ export default function Navbar() {
       {menuOpen && (
         <div className="md:hidden bg-snap-bg border-t border-snap-border px-4 py-4 flex flex-col gap-4">
           <Link href="/" className="text-snap-text font-medium" onClick={() => setMenuOpen(false)}>Home</Link>
-          <Link href="/orders" className="text-snap-text font-medium" onClick={() => setMenuOpen(false)}>Orders</Link>
+          {user && <Link href="/orders" className="text-snap-text font-medium" onClick={() => setMenuOpen(false)}>Orders</Link>}
           <Link href="/admin" className="text-snap-text font-medium" onClick={() => setMenuOpen(false)}>Admin</Link>
-          <Link href="/auth/login" className="text-snap-text font-medium" onClick={() => setMenuOpen(false)}>Login</Link>
+          {user ? (
+            <button onClick={() => signOut()} className="text-snap-text font-medium text-left">Sign Out</button>
+          ) : (
+            <Link href="/auth/login" className="text-snap-text font-medium" onClick={() => setMenuOpen(false)}>Login</Link>
+          )}
         </div>
       )}
     </header>
