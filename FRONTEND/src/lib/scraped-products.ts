@@ -1,6 +1,7 @@
 ﻿// lib/scraped-products.ts
 import { createClient } from '@/lib/supabase/server'
 import type { ScrapedProduct } from './scraper'
+import { validateAndOptimizeProduct, applyOverrides, type OptimizedProduct } from './product-optimizer'
 
 export interface DBScrapedProduct extends ScrapedProduct {
   id: string
@@ -132,32 +133,44 @@ export async function publishScrapedProduct(scrapedId: string, overrides: Publis
 
   const scraped = normalizeScrapedRow(sp)
 
-  const scrapedPrice = scraped.price_min ?? scraped.price_max ?? 0
-  const price = overrides.price != null && overrides.price > 0 ? overrides.price : scrapedPrice
-  const originalPrice =
-    overrides.originalPrice != null && overrides.originalPrice > 0
-      ? overrides.originalPrice
-      : (scraped.price_max != null && scraped.price_max > price ? scraped.price_max : price)
-  if (!price || price <= 0) {
+  const validationResult = validateAndOptimizeProduct(scraped)
+
+  if (validationResult.status === 'skipped') {
+    await updateScrapedProductStatus(scrapedId, 'skipped')
+    throw new Error(validationResult.reason || 'Product validation failed')
+  }
+
+  const optimized = validationResult.product!
+  const finalProduct: OptimizedProduct = applyOverrides(optimized, {
+    title: overrides.title,
+    price: overrides.price,
+    originalPrice: overrides.originalPrice,
+    description: overrides.description,
+    badge: overrides.badge,
+    inStock: overrides.inStock,
+    categoryId: overrides.categoryId,
+  })
+
+  if (!finalProduct.price || finalProduct.price <= 0) {
     throw new Error('Price is required before publishing')
   }
 
-  const image = (scraped.images && scraped.images[0]) || DEFAULT_IMAGE
+  const image = finalProduct.images[0] || DEFAULT_IMAGE
 
   const payload = {
-    title: overrides.title?.trim() || scraped.title || 'Imported product',
-    description: overrides.description?.trim() || scraped.description || '',
-    price,
-    originalPrice,
+    title: finalProduct.title,
+    description: finalProduct.description,
+    price: finalProduct.price,
+    originalPrice: finalProduct.originalPrice,
     image,
-    images: scraped.images || [],
+    images: finalProduct.images,
     specs: buildSpecs(scraped),
-    categoryId: overrides.categoryId ?? null,
+    categoryId: finalProduct.categoryId,
     aliexpressId: scraped.aliexpress_id,
     rating: scraped.rating ?? 0,
     reviewCount: scraped.review_count ?? 0,
-    inStock: overrides.inStock ?? scraped.in_stock ?? true,
-    badge: overrides.badge ?? null,
+    inStock: finalProduct.inStock,
+    badge: finalProduct.badge,
   }
 
   let productId: string | null = null

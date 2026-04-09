@@ -57,7 +57,7 @@ export default async function AdminPage() {
                 {products.map(p => (
                   <tr key={p.id} className="border-b border-snap-border hover:bg-snap-surface transition-colors">
                     <td className="px-5 py-3 text-snap-text font-medium max-w-xs truncate">{p.title}</td>
-                    <td className="px-5 py-3 text-snap-muted">{p.category}</td>
+                    <td className="px-5 py-3 text-snap-muted">{p.categoryId || '—'}</td>
                     <td className="px-5 py-3 text-snap-accent font-bold">${p.price}</td>
                     <td className="px-5 py-3">
                       <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${p.inStock ? 'bg-green-400/10 text-green-400' : 'bg-red-400/10 text-red-400'}`}>

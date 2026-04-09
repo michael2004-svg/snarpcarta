@@ -22,6 +22,7 @@ interface ScrapedProduct {
   in_stock: boolean
   status: 'pending' | 'added' | 'skipped'
   scraped_at: string
+  affiliate_url?: string | null
 }
 
 type FilterTab = 'all' | 'pending' | 'added' | 'skipped'
